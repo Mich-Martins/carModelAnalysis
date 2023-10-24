@@ -1,0 +1,277 @@
+--SCALE MODEL CAR DATABASE
+
+--QUESTIONS TO ANSWER INCLUDE THE FOLLOWING;
+--Question 1: Which products should we order more of or less of?
+--Question 2: How should we tailor marketing and communication strategies to customer behaviors?
+--Question 3: How much can we spend on acquiring new customers?
+
+--conforming details of all tables in the Cars Database;
+
+select * from customers;
+select * from employees;
+select * from offices;
+select * from orderdetails;
+select * from orders;
+select * from payments;
+select * from productlines;
+select * from products;
+
+--How many rows are there in each table
+
+select count(*) from customers;
+select count(*) from employees;
+select count(*) from offices;
+select count(*) from orderdetails;
+select count(*) from orders;
+select count(*) from payments;
+select count(*) from productlines;
+select count(*) from products;
+
+--How many columns are there in each table
+
+SELECT COUNT(*) FROM pragma_table_info('customers');
+SELECT COUNT(*) FROM pragma_table_info('employees');
+SELECT COUNT(*) FROM pragma_table_info('offices');
+SELECT COUNT(*) FROM pragma_table_info('orderdetails');
+SELECT COUNT(*) FROM pragma_table_info('orders');
+SELECT COUNT(*) FROM pragma_table_info('payments');
+SELECT COUNT(*) FROM pragma_table_info('productlines');
+SELECT COUNT(*) FROM pragma_table_info('products');
+
+--Creating a table to display tableName, Number of Columns and Number of rows;
+
+SELECT 'Customers' AS tableName, 
+       13 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Customers
+  
+UNION ALL
+
+SELECT 'Employees' AS tableName, 
+       8 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Employees
+
+UNION ALL
+
+SELECT 'Offices' AS tableName, 
+       9 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Offices
+
+UNION ALL
+
+SELECT 'OrderDetails' AS tableName, 
+       5 AS numOfColumne,
+       COUNT(*) AS numOfRow
+  FROM OrderDetails
+
+UNION ALL
+
+SELECT 'Orders' AS tableName, 
+       7 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Orders
+
+UNION ALL
+
+SELECT 'Payments' AS tableName, 
+       4 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Payments
+
+UNION ALL
+
+SELECT 'ProductLines' AS tableName, 
+       4 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM ProductLines
+
+UNION ALL
+
+SELECT 'Products' AS tableName, 
+       9 AS numOfColumn,
+       COUNT(*) AS numOfRow
+  FROM Products;
+
+--Question 1: Which Products Should We Order More of or Less of?
+--To answer the question, we will be using two tables from the database, the product table and the orderDetails table.
+--joining the product table and the orderDetails table.
+
+SELECT productName, quantityInStock, buyPrice, quantityOrdered, priceEach 
+FROM orderdetails INNER JOIN products 
+USING(productCode);
+
+--low stock for each product using a correlated subquery, group by productCode for the top 10.
+
+SELECT productCode, 
+        /*productName,
+        productLine,*/
+        (SELECT SUM(quantityOrdered) / quantityInStock
+            FROM orderdetails
+            WHERE products.productCode = orderdetails.productCode) AS lowStock
+        FROM products
+        GROUP BY productCode
+        ORDER BY lowStock DESC
+        LIMIT 10;
+        
+-- Product performance for each product.
+
+SELECT productCode, 
+       /*productName, 
+       productLine,
+       quantityOrdered, 
+       PriceEach,*/
+       ROUND(SUM(quantityOrdered * priceEach),2) AS prodPerformance
+    FROM orderDetails JOIN products USING(productCode)
+GROUP BY productCode
+ORDER BY prodPerformance desc;
+
+
+--Use a Common Table Expression (CTE) to display priority products for restocking using the IN operator.
+ 
+WITH lowStockTable AS (
+    SELECT productCode, 
+        productName,
+        productLine,
+        ROUND((SELECT SUM(quantityOrdered) / quantityInStock
+            FROM orderdetails
+            WHERE products.productCode = orderdetails.productCode),2) AS lowStock
+        FROM products
+        GROUP BY productCode
+        ORDER BY lowStock DESC
+        LIMIT 10
+)
+    SELECT productCode, 
+       productName, 
+       productLine,
+       quantityOrdered, 
+       PriceEach,
+       SUM(quantityOrdered * priceEach) AS prodPerformance
+    FROM orderDetails JOIN products USING(productCode)
+    WHERE productCode IN (SELECT productCode
+                         FROM lowStockTable)
+ GROUP BY productCode 
+ ORDER BY prodPerformance DESC
+ LIMIT 10;
+
+--Question 2: How Should We Match Marketing and Communication Strategies to Customer Behavior?
+--This involves categorizing customers: finding the VIP customers(that bring in the most profit for the store) and 
+--those who are less engaged customers (that bring in less profit.).
+--For example, we could organize some events to drive loyalty for the VIPs and launch a campaign for the less engaged.
+
+--For all the tables which include Customers, Orders, and OrderDetails 
+
+SELECT *
+FROM customers JOIN orders USING(customerNumber)
+               JOIN orderDetails USING(orderNumber);
+
+--Calculating the profits for each Customers
+
+SELECT
+    c.customerNumber,
+    c.customerName,
+    SUM(od.quantityOrdered * (od.priceEach - p.buyPrice)) AS profit
+FROM
+    customers c
+JOIN
+    orders o ON c.customerNumber = o.customerNumber
+JOIN
+    orderdetails od ON o.orderNumber = od.orderNumber
+JOIN
+    products p ON od.productCode = p.productCode
+GROUP BY
+    c.customerNumber
+ORDER BY
+    profit DESC;
+
+--For the top 10 VIP Customer
+
+WITH CustomerProfits AS (
+    SELECT
+        c.customerNumber,
+        c.contactLastName,
+        c.contactFirstName,
+        c.city,
+        c.country,
+        SUM(od.quantityOrdered * (od.priceEach - p.buyPrice)) AS profit
+    FROM
+        customers c
+    JOIN
+        orders o ON c.customerNumber = o.customerNumber
+    JOIN
+        orderdetails od ON o.orderNumber = od.orderNumber
+    JOIN
+        products p ON od.productCode = p.productCode
+    GROUP BY
+        c.customerNumber, c.contactLastName, c.contactFirstName, c.city, c.country
+)
+SELECT
+    contactLastName,
+    contactFirstName,
+    city,
+    country,
+    profit
+FROM
+    CustomerProfits
+ORDER BY
+    profit DESC
+LIMIT 10;
+
+-- For the top least engaged Customers
+ 
+WITH CustomerProfits AS (
+--    The same CTE as the written above.
+    SELECT
+        c.customerNumber,
+        c.contactLastName,
+        c.contactFirstName,
+        c.city,
+        c.country,
+        SUM(od.quantityOrdered * (od.priceEach - p.buyPrice)) AS profit
+    FROM
+        customers c
+    JOIN
+        orders o ON c.customerNumber = o.customerNumber
+    JOIN
+        orderdetails od ON o.orderNumber = od.orderNumber
+    JOIN
+        products p ON od.productCode = p.productCode
+    GROUP BY
+        c.customerNumber, c.contactLastName, c.contactFirstName, c.city, c.country
+)
+SELECT
+    contactLastName,
+    contactFirstName,
+    city,
+    country,
+    profit
+FROM
+    CustomerProfits
+ORDER BY
+    profit ASC
+LIMIT 10;
+   
+-- Question 3: How Much Can We Spend on Acquiring New Customers?
+  
+--Write a query to compute the average of customer profits using the CTE on the previous screen.
+--computing the Customer Lifetime Value (LTV), which represents the average amount of money a customer generates. We can then determine how much we can spend on marketing.
+
+WITH profitPerCustomer AS (
+    SELECT
+    c.customerNumber,
+    c.customerName,
+    SUM(od.quantityOrdered * (od.priceEach - p.buyPrice)) AS profit
+FROM
+    customers c
+JOIN
+    orders o ON c.customerNumber = o.customerNumber
+JOIN
+    orderdetails od ON o.orderNumber = od.orderNumber
+JOIN
+    products p ON od.productCode = p.productCode
+GROUP BY
+    c.customerNumber
+) 
+    SELECT AVG(profit) AS CLTV
+    FROM profitPerCustomer;
