@@ -5,16 +5,24 @@ cars and extract information for decision-making.
 
 ## Table of Content
 - [Objective](objective)
--  [Data Format](data-format)
--   [Schema](schema)
--   [Database Description](database-description)
--   [Problem Solving](problem-solving)
+- [Data Tools](data-tools)
+- [Data Format](data-format)
+- [Schema](schema)
+- [Database Description](database-description)
+- [Problem Solving](problem-solving)
+- [Conclusion](conclusion)
+
+  ![Dashboard](DashboardTableau.png)  
 
 ## Objective
 Good analysis starts with questions. Below are the questions we want to answer for this project.
 1. Which products should we order more of or less of?
 2. How should we tailor marketing and communication strategies to customer behaviours?
 3. How much can we spend on acquiring new customers?
+
+## Data Tools
+- SQLite Studio
+- Tableau
 
 ## Data Format: 
 SQLite database.
@@ -180,3 +188,7 @@ and launch a campaign for the less engaged.
 Computing the Customer Lifetime Value (LTV), which represents the average
 amount of money a customer generates. We can then determine how much we can
 spend on marketing.
+
+## Conclusion 
+The SQL codeline for finding the VIP customers, the leass engaging and more engaging customers, and the customers Lifetime Value (LTV) can be seen in the .sql file
+The visualization presented the Total unique order, the total order, the total sales, top sold cars, Annual sales, highest selling vendors, top sales per category, and the Invetory turnover per category.
